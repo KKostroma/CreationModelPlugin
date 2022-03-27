@@ -15,6 +15,7 @@ namespace CreationModelPlugin
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
             Document doc = commandData.Application.ActiveUIDocument.Document;
+
             WallCreate(doc);
 
             return Result.Succeeded;
