@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Autodesk.Revit.ApplicationServices;
 
 namespace CreationModelPlugin
 {
@@ -65,8 +66,10 @@ namespace CreationModelPlugin
             }
             AddDoor(doc, level1, walls[0]);
             AddWindows(doc, level1, walls[1], walls[2], walls[3]);
+            AddRoof(doc, level2, walls, width, depth);
             transaction.Commit();
         }
+
 
         private void AddDoor(Document doc, Level level1, Wall wall)
         {
@@ -130,6 +133,37 @@ namespace CreationModelPlugin
                 windowType.Activate();
 
             doc.Create.NewFamilyInstance(point8, windowType, wall3, level1, StructuralType.NonStructural);
+        }
+
+        private void AddRoof(Document doc, Level level2, List<Wall> walls, double width, double depth)
+        {
+            RoofType roofType = new FilteredElementCollector(doc)
+                .OfClass(typeof(RoofType))
+                .OfType<RoofType>()
+                .Where(x => x.Name.Equals("Типовой - 125мм"))
+                .Where(x => x.FamilyName.Equals("Базовая крыша"))
+                .FirstOrDefault();
+
+            View view = new FilteredElementCollector(doc)
+                .OfClass(typeof(View))
+                .OfType<View>()
+                .Where(x => x.Name.Equals("Уровень 1"))
+                .FirstOrDefault();
+
+            double wallWidth = walls[0].Width;
+            double dt = wallWidth / 2;
+            double extrusionStart = -width / 2 - dt;
+            double extrusionEnd = width / 2 + dt;
+            double curveStart = -depth / 2 - dt;
+            double curveEnd = +depth / 2 + dt;
+
+            CurveArray curveArray = new CurveArray();
+            curveArray.Append(Line.CreateBound(new XYZ(0, curveStart, level2.Elevation), new XYZ(0, 0, level2.Elevation + 10)));
+            curveArray.Append(Line.CreateBound(new XYZ(0, 0, level2.Elevation + 10), new XYZ(0, curveEnd, level2.Elevation)));
+            ReferencePlane plane = doc.Create.NewReferencePlane(new XYZ(0, 0, 0), new XYZ(0, 0, 20), new XYZ(0, 20, 0), view);
+            ExtrusionRoof extrusionRoof = doc.Create.NewExtrusionRoof(curveArray, plane, level2, roofType, extrusionStart, extrusionEnd);
+            extrusionRoof.EaveCuts = EaveCutterType.TwoCutSquare;
+
         }
     }
 }
